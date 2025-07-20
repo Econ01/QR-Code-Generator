@@ -14,19 +14,44 @@ body {
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     text-align: center;
+    max-width: 400px;
+    width: 100%;
 }
 
 h1 {
     margin-bottom: 20px;
 }
 
+/* Chips */
+.chip-group {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.chip {
+    padding: 8px 14px;
+    border-radius: 20px;
+    background: #e0e0e0;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.3s;
+}
+
+.chip.active {
+    background: #007bff;
+    color: white;
+}
+
+/* Input Group */
 .input-group {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
 }
 
-input {
+input[type="text"] {
     padding: 10px;
     font-size: 16px;
     flex: 1;
@@ -45,6 +70,20 @@ button {
 
 button:hover {
     background: #0056b3;
+}
+
+/* Customization Controls */
+.customization {
+    text-align: left;
+    margin: 20px 0;
+    display: grid;
+    gap: 10px;
+}
+
+.customization label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .qr-wrapper {

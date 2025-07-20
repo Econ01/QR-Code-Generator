@@ -9,11 +9,58 @@
 <body>
     <div class="container">
         <h1>QR Code Generator</h1>
+
+        <!-- Input Type Selection -->
+        <div class="chip-group" id="input-type">
+            <div class="chip active" data-type="url">URL</div>
+            <div class="chip" data-type="text">Text</div>
+            <div class="chip" data-type="email">Email</div>
+            <div class="chip" data-type="phone">Phone</div>
+        </div>
+
+        <!-- Input -->
         <div class="input-group">
-            <input type="text" id="qr-input" placeholder="Enter URL or text">
+            <input type="text" id="qr-input" placeholder="Enter URL">
             <button id="generate-btn">Generate</button>
         </div>
+
+        <!-- QR Preview -->
         <div class="qr-wrapper" id="qr-code"></div>
+
+        <!-- Customization Controls -->
+        <div class="customization">
+            <label>
+                Foreground Color:
+                <input type="color" id="color-foreground" value="#000000">
+            </label>
+            <label>
+                Background Color:
+                <input type="color" id="color-background" value="#ffffff">
+            </label>
+            <label>
+                Export Size:
+                <select id="export-size">
+                    <option value="128">128x128</option>
+                    <option value="256">256x256</option>
+                    <option value="512" selected>512x512</option>
+                    <option value="1000">1000x1000</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </label>
+            <label id="custom-size-label" style="display:none;">
+                Custom Size:
+                <input type="number" id="custom-size" min="64" max="2000" value="500"> px
+            </label>
+            <label>
+                Corner Style:
+                <select id="corner-style">
+                    <option value="rounded">Rounded</option>
+                    <option value="square">Square</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- Download -->
         <div class="download-buttons">
             <button id="download-png">Download PNG</button>
             <button id="download-svg">Download SVG</button>
