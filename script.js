@@ -1,16 +1,22 @@
-let currentType = "url"; // Default input type
-let exportSize = 512;    // Default export size
+let currentType = "url";
+let exportSize = 512;
 
 const qrCode = new QRCodeStyling({
-    width: 200,  // Fixed preview size
-    height: 200,
+    width: 250,
+    height: 250,
     data: "https://example.com",
+    margin: 10,
     dotsOptions: {
-        color: "#000",
+        color: "#4361ee",
         type: "rounded"
     },
     backgroundOptions: {
         color: "#ffffff"
+    },
+    imageOptions: {
+        crossOrigin: "anonymous",
+        imageSize: 0.4,
+        margin: 4
     }
 });
 
@@ -19,18 +25,15 @@ const input = document.getElementById("qr-input");
 const generateBtn = document.getElementById("generate-btn");
 const downloadPngBtn = document.getElementById("download-png");
 const downloadSvgBtn = document.getElementById("download-svg");
-
+const clearInputBtn = document.getElementById("clear-input");
 const foregroundInput = document.getElementById("color-foreground");
 const backgroundInput = document.getElementById("color-background");
-const cornerStyle = document.getElementById("corner-style");
 const chipGroup = document.getElementById("input-type");
-
 const exportSizeSelect = document.getElementById("export-size");
-const customSizeLabel = document.getElementById("custom-size-label");
-const customSizeInput = document.getElementById("custom-size");
-
 const logoInput = document.getElementById("logo-input");
 const removeLogoBtn = document.getElementById("remove-logo");
+const errorCorrectionSelect = document.getElementById("error-correction");
+const cornerStyleBtns = document.querySelectorAll(".btn-option");
 
 qrCode.append(qrWrapper);
 
@@ -62,11 +65,7 @@ logoInput.addEventListener("change", (e) => {
     const reader = new FileReader();
     reader.onload = function (event) {
         qrCode.update({
-            image: event.target.result,
-            imageOptions: {
-                crossOrigin: "anonymous",
-                imageSize: 0.4 // 40% of QR size
-            }
+            image: event.target.result
         });
     };
     reader.readAsDataURL(file);
@@ -74,31 +73,44 @@ logoInput.addEventListener("change", (e) => {
 
 // Remove Logo
 removeLogoBtn.addEventListener("click", () => {
-    qrCode.update({
-        image: "" // Clear image
-    });
-    logoInput.value = ""; // Reset file input
+    qrCode.update({ image: "" });
+    logoInput.value = "";
 });
 
 // Generate QR
 generateBtn.addEventListener("click", () => {
     const text = formatData(input.value.trim());
-    qrCode.update({ data: text });
+    
+    if (!text) {
+        input.focus();
+        return;
+    }
+    
+    qrWrapper.classList.add("qr-pulse");
+    
+    setTimeout(() => {
+        qrCode.update({ data: text });
+        qrWrapper.classList.remove("qr-pulse");
+        
+        // Hide placeholder
+        const placeholder = document.querySelector(".placeholder");
+        if (placeholder) placeholder.style.display = "none";
+    }, 300);
 });
 
 // Download buttons
 downloadPngBtn.addEventListener("click", () => {
-    const size = exportSizeSelect.value === "custom" ? customSizeInput.value : exportSize;
-    qrCode.update({ width: parseInt(size), height: parseInt(size) });
+    const size = parseInt(exportSizeSelect.value, 10);
+    qrCode.update({ width: size, height: size });
     qrCode.download({ name: "qr-code", extension: "png" });
-    qrCode.update({ width: 200, height: 200 }); // Reset preview size
+    qrCode.update({ width: 250, height: 250 });
 });
 
 downloadSvgBtn.addEventListener("click", () => {
-    const size = exportSizeSelect.value === "custom" ? customSizeInput.value : exportSize;
-    qrCode.update({ width: parseInt(size), height: parseInt(size) });
+    const size = parseInt(exportSizeSelect.value, 10);
+    qrCode.update({ width: size, height: size });
     qrCode.download({ name: "qr-code", extension: "svg" });
-    qrCode.update({ width: 200, height: 200 }); // Reset preview size
+    qrCode.update({ width: 250, height: 250 });
 });
 
 // Update colors
@@ -110,34 +122,51 @@ backgroundInput.addEventListener("input", () => {
     qrCode.update({ backgroundOptions: { color: backgroundInput.value } });
 });
 
-// Update corner style
-cornerStyle.addEventListener("change", () => {
-    qrCode.update({ dotsOptions: { type: cornerStyle.value } });
-});
-
 // Chip selection
 chipGroup.addEventListener("click", (e) => {
-    if (e.target.classList.contains("chip")) {
-        document.querySelectorAll(".chip").forEach(chip => chip.classList.remove("active"));
-        e.target.classList.add("active");
-        currentType = e.target.dataset.type;
+    if (e.target.closest(".chip")) {
+        const chip = e.target.closest(".chip");
+        document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        currentType = chip.dataset.type;
 
         const placeholder = {
-            url: "Enter URL",
-            text: "Enter Text",
-            email: "Enter Email Address",
-            phone: "Enter Phone Number"
+            url: "https://example.com",
+            text: "Enter your text here",
+            email: "user@example.com",
+            phone: "+1234567890"
         };
         input.placeholder = placeholder[currentType];
     }
 });
 
-// Export size selection
-exportSizeSelect.addEventListener("change", () => {
-    if (exportSizeSelect.value === "custom") {
-        customSizeLabel.style.display = "flex";
-    } else {
-        customSizeLabel.style.display = "none";
-        exportSize = parseInt(exportSizeSelect.value, 10);
-    }
+// Corner style selection
+cornerStyleBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+        cornerStyleBtns.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        qrCode.update({ dotsOptions: { type: btn.dataset.value } });
+    });
+});
+
+// Clear input
+clearInputBtn.addEventListener("click", () => {
+    input.value = "";
+    input.focus();
+});
+
+// Error correction
+errorCorrectionSelect.addEventListener("change", () => {
+    qrCode.update({
+        qrOptions: {
+            errorCorrectionLevel: errorCorrectionSelect.value
+        }
+    });
+});
+
+// Initialize with animation
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+        document.body.classList.add("loaded");
+    }, 300);
 });

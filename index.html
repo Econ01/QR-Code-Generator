@@ -3,76 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Generator</title>
+    <title>QRGen - Modern QR Generator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>QR Code Generator</h1>
+        <header>
+            <h1><i class="fas fa-qrcode"></i> QRGen</h1>
+            <p>Create customized QR codes in seconds</p>
+        </header>
 
-        <!-- Input Type Selection -->
-        <div class="chip-group" id="input-type">
-            <div class="chip active" data-type="url">URL</div>
-            <div class="chip" data-type="text">Text</div>
-            <div class="chip" data-type="email">Email</div>
-            <div class="chip" data-type="phone">Phone</div>
-        </div>
+        <div class="card">
+            <!-- Input Type Selection -->
+            <div class="chip-group" id="input-type">
+                <div class="chip active" data-type="url">
+                    <i class="fas fa-link"></i> URL
+                </div>
+                <div class="chip" data-type="text">
+                    <i class="fas fa-font"></i> Text
+                </div>
+                <div class="chip" data-type="email">
+                    <i class="fas fa-envelope"></i> Email
+                </div>
+                <div class="chip" data-type="phone">
+                    <i class="fas fa-phone"></i> Phone
+                </div>
+            </div>
 
-        <!-- Input -->
-        <div class="input-group">
-            <input type="text" id="qr-input" placeholder="Enter URL">
-            <button id="generate-btn">Generate</button>
-        </div>
+            <!-- Input -->
+            <div class="input-group">
+                <div class="input-with-icon">
+                    <i class="fas fa-pencil-alt"></i>
+                    <input type="text" id="qr-input" placeholder="https://example.com">
+                    <button id="clear-input"><i class="fas fa-times"></i></button>
+                </div>
+                <button id="generate-btn" class="primary">
+                    <i class="fas fa-bolt"></i> Generate
+                </button>
+            </div>
 
-        <!-- QR Preview -->
-        <div class="qr-wrapper" id="qr-code"></div>
+            <!-- QR Preview -->
+            <div class="qr-wrapper" id="qr-code">
+                <div class="placeholder">
+                    <i class="fas fa-qrcode"></i>
+                    <p>Your QR code will appear here</p>
+                </div>
+            </div>
 
-        <!-- Customization Controls -->
-        <div class="customization">
-            <label>
-                Foreground Color:
-                <input type="color" id="color-foreground" value="#000000">
-            </label>
-            <label>
-                Background Color:
-                <input type="color" id="color-background" value="#ffffff">
-            </label>
-            <label>
-                Export Size:
-                <select id="export-size">
-                    <option value="128">128x128</option>
-                    <option value="256">256x256</option>
-                    <option value="512" selected>512x512</option>
-                    <option value="1000">1000x1000</option>
-                    <option value="custom">Custom</option>
-                </select>
-            </label>
-            <label id="custom-size-label" style="display:none;">
-                Custom Size:
-                <input type="number" id="custom-size" min="64" max="2000" value="500"> px
-            </label>
-            <label>
-                Corner Style:
-                <select id="corner-style">
-                    <option value="rounded">Rounded</option>
-                    <option value="square">Square</option>
-                </select>
-            </label>
-        </div>
+            <!-- Customization Controls -->
+            <div class="customization">
+                <h3><i class="fas fa-sliders-h"></i> Customize</h3>
+                
+                <div class="color-pickers">
+                    <div class="color-picker">
+                        <label>Foreground</label>
+                        <input type="color" id="color-foreground" value="#4361ee">
+                    </div>
+                    <div class="color-picker">
+                        <label>Background</label>
+                        <input type="color" id="color-background" value="#ffffff">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Corner Style</label>
+                    <div class="button-group">
+                        <button class="btn-option active" data-value="rounded">
+                            <i class="fas fa-circle"></i> Rounded
+                        </button>
+                        <button class="btn-option" data-value="square">
+                            <i class="fas fa-square"></i> Square
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Error Correction</label>
+                    <select id="error-correction">
+                        <option value="L">Low (7%)</option>
+                        <option value="M" selected>Medium (15%)</option>
+                        <option value="Q">High (25%)</option>
+                        <option value="H">Maximum (30%)</option>
+                    </select>
+                </div>
+            </div>
 
-        <!-- Logo Upload -->
-        <div class="logo-upload">
-            <label for="logo-input">Upload Logo:</label>
-            <input type="file" id="logo-input" accept="image/*">
-            <button id="remove-logo">Remove Logo</button>
+            <!-- Logo Upload -->
+            <div class="logo-upload">
+                <label for="logo-input">
+                    <i class="fas fa-image"></i> Add Logo
+                </label>
+                <input type="file" id="logo-input" accept="image/*">
+                <button id="remove-logo" class="secondary">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+            </div>
         </div>
 
         <!-- Download -->
-        <div class="download-buttons">
-            <button id="download-png">Download PNG</button>
-            <button id="download-svg">Download SVG</button>
+        <div class="download-section">
+            <div class="size-selector">
+                <label>Export Size:</label>
+                <select id="export-size">
+                    <option value="128">128px</option>
+                    <option value="256">256px</option>
+                    <option value="512" selected>512px</option>
+                    <option value="1024">1024px</option>
+                </select>
+            </div>
+            
+            <div class="download-buttons">
+                <button id="download-png" class="download-btn">
+                    <i class="fas fa-download"></i> PNG
+                </button>
+                <button id="download-svg" class="download-btn">
+                    <i class="fas fa-download"></i> SVG
+                </button>
+            </div>
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
     <script src="script.js"></script>
 </body>
