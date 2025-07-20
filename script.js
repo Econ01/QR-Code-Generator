@@ -29,6 +29,9 @@ const exportSizeSelect = document.getElementById("export-size");
 const customSizeLabel = document.getElementById("custom-size-label");
 const customSizeInput = document.getElementById("custom-size");
 
+const logoInput = document.getElementById("logo-input");
+const removeLogoBtn = document.getElementById("remove-logo");
+
 qrCode.append(qrWrapper);
 
 // Format data based on selected type
@@ -50,6 +53,32 @@ function formatData(data) {
             return data;
     }
 }
+
+// Upload Logo
+logoInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (event) {
+        qrCode.update({
+            image: event.target.result,
+            imageOptions: {
+                crossOrigin: "anonymous",
+                imageSize: 0.4 // 40% of QR size
+            }
+        });
+    };
+    reader.readAsDataURL(file);
+});
+
+// Remove Logo
+removeLogoBtn.addEventListener("click", () => {
+    qrCode.update({
+        image: "" // Clear image
+    });
+    logoInput.value = ""; // Reset file input
+});
 
 // Generate QR
 generateBtn.addEventListener("click", () => {

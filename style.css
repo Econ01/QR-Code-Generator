@@ -95,3 +95,23 @@ button:hover {
     justify-content: center;
     gap: 10px;
 }
+
+.logo-upload {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.logo-upload input {
+    flex: 1;
+    margin-left: 10px;
+}
+
+#remove-logo {
+    background: #dc3545;
+}
+
+#remove-logo:hover {
+    background: #b52b39;
+}
