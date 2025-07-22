@@ -1,27 +1,20 @@
 let currentType = "url";
 let exportSize = 512;
-
-const qrCode = new QRCodeStyling({
+let bulkQRCodes = [];
+let qrSettings = {
     width: 250,
     height: 250,
-    data: "https://example.com",
     margin: 10,
-    dotsOptions: {
-        color: "#4361ee",
-        type: "rounded"
-    },
-    backgroundOptions: {
-        color: "#ffffff"
-    },
-    imageOptions: {
-        crossOrigin: "anonymous",
-        imageSize: 0.4,
-        margin: 4
-    }
-});
+    dotsOptions: { color: "#4361ee", type: "rounded" },
+    backgroundOptions: { color: "#ffffff" },
+    image: "",
+    qrOptions: { errorCorrectionLevel: "M" },
+    imageOptions: { crossOrigin: "anonymous", imageSize: 0.4, margin: 4 }
+};
 
 const qrWrapper = document.getElementById("qr-code");
 const input = document.getElementById("qr-input");
+const bulkInput = document.getElementById("qr-bulk-input");
 const generateBtn = document.getElementById("generate-btn");
 const downloadPngBtn = document.getElementById("download-png");
 const downloadSvgBtn = document.getElementById("download-svg");
@@ -33,138 +26,203 @@ const removeLogoBtn = document.getElementById("remove-logo");
 const errorCorrectionSelect = document.getElementById("error-correction");
 const cornerStyleBtns = document.querySelectorAll(".btn-option");
 
-qrCode.append(qrWrapper);
-
+// Theme handling
 const htmlElement = document.documentElement;
 const themeToggleBtn = document.getElementById('theme-toggle');
 
-// Apply system theme on launch
 function applySystemTheme() {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     htmlElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-    themeToggleBtn.innerHTML = prefersDark 
-        ? '<i class="fas fa-moon"></i>' 
-        : '<i class="fas fa-sun"></i>';
+    themeToggleBtn.innerHTML = prefersDark ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
 }
 
-// Toggle manually
 themeToggleBtn.addEventListener('click', () => {
     const currentTheme = htmlElement.getAttribute('data-theme');
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
     htmlElement.setAttribute('data-theme', newTheme);
-    themeToggleBtn.innerHTML = newTheme === 'dark' 
-        ? '<i class="fas fa-moon"></i>' 
-        : '<i class="fas fa-sun"></i>';
+    themeToggleBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
 });
 
-// Listen to system theme changes
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applySystemTheme);
-
-// Initialize theme
 applySystemTheme();
 
 // Format data based on selected type
 function formatData(data) {
     if (!data) return "https://example.com";
-
     switch (currentType) {
         case "url":
-            if (!data.startsWith("http://") && !data.startsWith("https://")) {
-                return `https://${data}`;
-            }
-            return data;
+            return data.startsWith("http") ? data : `https://${data}`;
         case "email":
             return data.startsWith("mailto:") ? data : `mailto:${data}`;
         case "phone":
             return data.startsWith("tel:") ? data : `tel:${data}`;
-        case "text":
         default:
             return data;
     }
 }
 
-// Upload Logo
+// ---------- Bulk Mode Parsing ----------
+function parseBulkInput(text) {
+    const lines = text.split(/\n/);
+    const urlRegex = /(https?:\/\/[^\s)]+)/;
+    const nameUrlRegex = /\[(.*?)\]\((https?:\/\/[^\s)]+)\)/;
+    const parsed = [];
+
+    lines.forEach(line => {
+        line = line.trim();
+        if (!line) return;
+
+        let match = nameUrlRegex.exec(line);
+        if (match) {
+            parsed.push({ name: match[1].trim(), url: match[2] });
+        } else {
+            let urlMatch = urlRegex.exec(line);
+            if (urlMatch) {
+                const url = urlMatch[0];
+                const domain = new URL(url).hostname.replace('www.', '');
+                parsed.push({ name: domain, url });
+            }
+        }
+    });
+    return parsed;
+}
+
+function createQRCodeInstance(data) {
+    return new QRCodeStyling({ ...qrSettings, data });
+}
+
+async function createQRCodeBlob(data, format = "png", size = 512) {
+    const tempQR = new QRCodeStyling({ ...qrSettings, data, width: size, height: size });
+    return await tempQR.getRawData(format);
+}
+
+async function renderBulkQRCodes() {
+    const inputText = bulkInput.value.trim();
+    if (!inputText) return;
+
+    const entries = parseBulkInput(inputText);
+    if (!entries.length) {
+        alert("No valid URLs found!");
+        return;
+    }
+
+    qrWrapper.innerHTML = '';
+    bulkQRCodes = [];
+
+    for (let entry of entries) {
+        const qr = createQRCodeInstance(entry.url);
+        const qrItem = document.createElement('div');
+        qrItem.className = 'qr-item';
+        qr.append(qrItem);
+        const nameLabel = document.createElement('p');
+        nameLabel.textContent = entry.name;
+        const wrapper = document.createElement('div');
+        wrapper.appendChild(qrItem);
+        wrapper.appendChild(nameLabel);
+        qrWrapper.appendChild(wrapper);
+
+        const blob = await createQRCodeBlob(entry.url);
+        bulkQRCodes.push({ name: entry.name, url: entry.url, blob });
+    }
+}
+
+function renderSingleQRCode() {
+    const text = formatData(input.value.trim());
+    if (!text) {
+        input.focus();
+        return;
+    }
+    qrWrapper.innerHTML = '';
+    const qr = createQRCodeInstance(text);
+    qr.append(qrWrapper);
+}
+
+// ---------- Generate Button ----------
+generateBtn.addEventListener("click", () => {
+    currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
+});
+
+// ---------- Download Buttons ----------
+downloadPngBtn.addEventListener("click", async () => {
+    currentType === 'bulk' ? await downloadBulk('png') : downloadSingle('png');
+});
+
+downloadSvgBtn.addEventListener("click", async () => {
+    currentType === 'bulk' ? await downloadBulk('svg') : downloadSingle('svg');
+});
+
+function downloadSingle(extension) {
+    const size = parseInt(exportSizeSelect.value, 10);
+    createQRCodeInstance(formatData(input.value.trim())).download({ name: "qr-code", extension });
+}
+
+async function downloadBulk(format) {
+    if (!bulkQRCodes.length) {
+        alert("No QR codes generated for bulk download.");
+        return;
+    }
+    const zip = new JSZip();
+    for (let qr of bulkQRCodes) {
+        const blob = await createQRCodeBlob(qr.url, format, parseInt(exportSizeSelect.value, 10));
+        zip.file(`${qr.name}.${format}`, blob);
+    }
+    const content = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(content);
+    a.download = "qr-codes.zip";
+    a.click();
+}
+
+// ---------- Customization ----------
+document.getElementById('color-foreground').addEventListener('input', (e) => {
+    qrSettings.dotsOptions.color = e.target.value;
+    if (currentType === 'bulk') renderBulkQRCodes();
+    else renderSingleQRCode();
+});
+
+document.getElementById('color-background').addEventListener('input', (e) => {
+    qrSettings.backgroundOptions.color = e.target.value;
+    if (currentType === 'bulk') renderBulkQRCodes();
+    else renderSingleQRCode();
+});
+
+cornerStyleBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+        cornerStyleBtns.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        qrSettings.dotsOptions.type = btn.dataset.value;
+        currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
+    });
+});
+
+errorCorrectionSelect.addEventListener("change", () => {
+    qrSettings.qrOptions.errorCorrectionLevel = errorCorrectionSelect.value;
+    currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
+});
+
+// Logo Upload
 logoInput.addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = function (event) {
-        qrCode.update({
-            image: event.target.result
-        });
+        qrSettings.image = event.target.result;
+        currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
     };
     reader.readAsDataURL(file);
 });
 
 // Remove Logo
 removeLogoBtn.addEventListener("click", () => {
-    qrCode.update({ image: "" });
+    qrSettings.image = "";
     logoInput.value = "";
+    currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
 });
 
-// Generate QR
-generateBtn.addEventListener("click", () => {
-    const text = formatData(input.value.trim());
-    
-    if (!text) {
-        input.focus();
-        return;
-    }
-    
-    qrWrapper.classList.add("qr-pulse");
-    
-    setTimeout(() => {
-        qrCode.update({ data: text });
-        qrWrapper.classList.remove("qr-pulse");
-        
-        // Hide placeholder
-        const placeholder = document.querySelector(".placeholder");
-        if (placeholder) placeholder.style.display = "none";
-    }, 300);
-});
-
-// Download buttons
-downloadPngBtn.addEventListener("click", () => {
-    const size = parseInt(exportSizeSelect.value, 10);
-    qrCode.update({ width: size, height: size });
-    qrCode.download({ name: "qr-code", extension: "png" });
-    qrCode.update({ width: 250, height: 250 });
-});
-
-downloadSvgBtn.addEventListener("click", () => {
-    const size = parseInt(exportSizeSelect.value, 10);
-    qrCode.update({ width: size, height: size });
-    qrCode.download({ name: "qr-code", extension: "svg" });
-    qrCode.update({ width: 250, height: 250 });
-});
-
-// Use CSS variables for defaults
-const primaryColor = getComputedStyle(document.documentElement)
-    .getPropertyValue('--primary').trim();
-
-document.getElementById('color-foreground').value = primaryColor;
-document.getElementById('color-background').value = 'transparent';
-
-// Initialize Coloris for color pickers
-Coloris({
-    el: '.coloris',
-    theme: 'pill',
-    themeMode: 'auto',
-    alpha: true,
-    margin: 10,
-    swatches: [
-        '#4361ee', '#7209b7', '#06d6a0', '#ef476f',
-        '#ffd166', '#118ab2', '#073b4c', '#ffffff', '#000000'
-    ]
-});
-
-// Event listeners for color changes
-document.getElementById('color-foreground').addEventListener('input', (e) => {
-    qrCode.update({ dotsOptions: { color: e.target.value } });
-});
-document.getElementById('color-background').addEventListener('input', (e) => {
-    qrCode.update({ backgroundOptions: { color: e.target.value } });
+// Clear input
+clearInputBtn.addEventListener("click", () => {
+    if (currentType === 'bulk') bulkInput.value = "";
+    else input.value = "";
 });
 
 // Chip selection
@@ -179,39 +237,26 @@ chipGroup.addEventListener("click", (e) => {
             url: "https://example.com",
             text: "Enter your text here",
             email: "user@example.com",
-            phone: "+1234567890"
+            phone: "+1234567890",
+            bulk: "Enter multiple URLs, one per line"
         };
-        input.placeholder = placeholder[currentType];
+
+        if (currentType === "bulk") {
+            input.style.display = "none";
+            bulkInput.style.display = "block";
+            bulkInput.placeholder = placeholder.bulk;
+        } else {
+            input.style.display = "block";
+            bulkInput.style.display = "none";
+            input.placeholder = placeholder[currentType];
+        }
     }
 });
 
-// Corner style selection
-cornerStyleBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-        cornerStyleBtns.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        qrCode.update({ dotsOptions: { type: btn.dataset.value } });
-    });
-});
-
-// Clear input
-clearInputBtn.addEventListener("click", () => {
-    input.value = "";
-    input.focus();
-});
-
-// Error correction
-errorCorrectionSelect.addEventListener("change", () => {
-    qrCode.update({
-        qrOptions: {
-            errorCorrectionLevel: errorCorrectionSelect.value
-        }
-    });
-});
-
-// Initialize with animation
+// Initialize
 document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
         document.body.classList.add("loaded");
     }, 300);
+    renderSingleQRCode();
 });

@@ -33,6 +33,9 @@
                 <div class="chip" data-type="phone">
                     <i class="fas fa-phone"></i> Phone
                 </div>
+                <div class="chip" data-type="bulk">
+                    <i class="fas fa-layer-group"></i> Bulk URLs
+                </div>
             </div>
 
             <!-- Input -->
@@ -40,6 +43,7 @@
                 <div class="input-with-icon">
                     <i class="fas fa-pencil-alt"></i>
                     <input type="text" id="qr-input" placeholder="https://example.com">
+                    <textarea id="qr-bulk-input" placeholder="Enter multiple URLs, one per line"></textarea>
                     <button id="clear-input"><i class="fas fa-times"></i></button>
                 </div>
                 <button id="generate-btn" class="primary">
@@ -130,6 +134,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
