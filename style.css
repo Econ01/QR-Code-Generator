@@ -167,7 +167,6 @@ header p {
 .card {
     padding: 1.8rem;
     animation: slideUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    margin-bottom: 2rem;
 }
 
 /* Chips */
@@ -449,6 +448,40 @@ button.secondary:active {
     color: var(--text);
 }
 
+.button-group {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.btn-option {
+    flex: 1;
+    background: var(--background-raised);
+    box-shadow: var(--shadow-soft);
+    color: var(--text);
+    height: 3rem;
+    padding: 0.8rem 1.4rem;
+    border-radius: 40px;
+    font-weight: 500;
+    text-align: center;
+    justify-content: center;
+    transition: var(--ease-elastic) transform 1.2s, box-shadow 1.2s var(--ease-elastic);
+}
+
+.btn-option.active {
+    background: var(--primary);
+    color: var(--background);
+    border-radius: 12px;
+    transform: translateY(0) scale(0.95);
+    box-shadow: none;
+    transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+
+.btn-option:hover:not(.active) {
+    background: var(--background-elevated);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: var(--shadow-medium);
+}
+
 .form-group select {
     width: 100%;
     padding: 1rem;
@@ -457,103 +490,98 @@ button.secondary:active {
     font-size: 15px;
     box-shadow: var(--shadow-soft);
     border: none;
-}
-
-.form-group select:focus {
-    border-color: var(--primary);
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
-}
-
-.button-group {
-    display: flex;
-    gap: 10px;
-}
-
-.btn-option {
-    flex: 1;
-    background: #f8f9ff;
     color: var(--text);
-    padding: 12px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    font-weight: 500;
-    text-align: center;
-}
-
-.btn-option.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-}
-
-.btn-option:hover:not(.active) {
-    background: #edf2ff;
 }
 
 /* Logo Upload */
 .logo-upload {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-top: 10px;
+    gap: 1rem;
+    margin-top: 1rem;
 }
 
 .logo-upload label {
-    padding: 12px 20px;
-    background: #f8f9ff;
-    border-radius: 12px;
-    border: 2px solid var(--border);
-    font-weight: 500;
+    padding: 0.8rem 1.2rem;
+    background: var(--background-raised);
+    border-radius: 40px;
+    font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
     flex: 1;
-}
-
-.logo-upload label:hover {
-    background: #edf2ff;
+    box-shadow: var(--shadow-soft);
+    transition: var(--ease-elastic) transform 1.2s, box-shadow 1.2s var(--ease-elastic), background 1.2s var(--ease-elastic);
 }
 
 .logo-upload input[type="file"] {
     display: none;
 }
 
-/* Download Section */
-.download-section {
-    background: var(--card-bg);
-    border-radius: 20px;
-    box-shadow: var(--shadow);
-    padding: 25px;
-    animation: slideUp 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.logo-upload label:hover {
+    background: var(--background-elevated);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: var(--shadow-medium);
+}
+
+.logo-upload label:active {
+    transform: translateY(0) scale(0.95);
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
 }
 
 .size-selector {
     display: flex;
+    flex-direction: row;
+    justify-content: space-around;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
+    justify-content: center;
+    padding: 0rem 2rem 0rem 2rem;
+    width: 100%;
 }
 
 .size-selector label {
-    font-weight: 500;
+    flex: 1;
     color: var(--text);
+    font-size: 18px;
+    font-weight: 600;
 }
 
 .size-selector select {
-    flex: 1;
-    padding: 14px;
-    border-radius: 12px;
-    border: 2px solid var(--border);
-    background: white;
+    flex: 2;
+    width: 100%;
+    padding: 1rem;
+    border-radius: 40px;
+    background: var(--background-raised);
     font-size: 15px;
-    font-weight: 500;
+    box-shadow: var(--shadow-soft);
+    border: none;
+    color: var(--text);
 }
 
 .download-buttons {
     display: flex;
-    gap: 15px;
+    gap: 1rem;
+    padding: 2rem;
+}
+
+.download-btn {
+    background: var(--background-raised);
+    color: var(--primary);
+    box-shadow: var(--shadow-soft);
+}
+
+download-btn:hover {
+    background: var(--background-elevated);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: var(--shadow-medium);
+}
+
+download-btn:active {
+    transform: translateY(0) scale(0.95);
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
 }
 
 /* Animations */
@@ -571,14 +599,4 @@ button.secondary:active {
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.03); }
-    100% { transform: scale(1); }
-}
-
-.qr-pulse {
-    animation: pulse 1.5s ease-in-out;
 }
