@@ -87,8 +87,8 @@ function parseBulkInput(text) {
     return parsed;
 }
 
-function createQRCodeInstance(data) {
-    return new QRCodeStyling({ ...qrSettings, data });
+function createQRCodeInstance(data, size = qrSettings.width) {
+    return new QRCodeStyling({ ...qrSettings, data, width: size, height: size });
 }
 
 async function createQRCodeBlob(data, format = "png", size = 512) {
@@ -96,6 +96,16 @@ async function createQRCodeBlob(data, format = "png", size = 512) {
     return await tempQR.getRawData(format);
 }
 
+function updateQRWrapperMode() {
+    const count = qrWrapper.querySelectorAll('.qr-item').length;
+    if (count > 1) {
+        qrWrapper.classList.add('qr-grid');
+    } else {
+        qrWrapper.classList.remove('qr-grid');
+    }
+}
+
+// ---------- Rendering ----------
 async function renderBulkQRCodes() {
     const inputText = bulkInput.value.trim();
     if (!inputText) return;
@@ -110,20 +120,26 @@ async function renderBulkQRCodes() {
     bulkQRCodes = [];
 
     for (let entry of entries) {
-        const qr = createQRCodeInstance(entry.url);
+        const qr = createQRCodeInstance(entry.url, 120); // thumbnails
         const qrItem = document.createElement('div');
         qrItem.className = 'qr-item';
         qr.append(qrItem);
+
         const nameLabel = document.createElement('p');
         nameLabel.textContent = entry.name;
+
         const wrapper = document.createElement('div');
+        wrapper.classList.add('qr-item');
         wrapper.appendChild(qrItem);
         wrapper.appendChild(nameLabel);
+
         qrWrapper.appendChild(wrapper);
 
         const blob = await createQRCodeBlob(entry.url);
         bulkQRCodes.push({ name: entry.name, url: entry.url, blob });
     }
+
+    updateQRWrapperMode();
 }
 
 function renderSingleQRCode() {
@@ -133,8 +149,10 @@ function renderSingleQRCode() {
         return;
     }
     qrWrapper.innerHTML = '';
-    const qr = createQRCodeInstance(text);
+    const qr = createQRCodeInstance(text, 250);
     qr.append(qrWrapper);
+
+    updateQRWrapperMode();
 }
 
 // ---------- Generate Button ----------
@@ -153,7 +171,8 @@ downloadSvgBtn.addEventListener("click", async () => {
 
 function downloadSingle(extension) {
     const size = parseInt(exportSizeSelect.value, 10);
-    createQRCodeInstance(formatData(input.value.trim())).download({ name: "qr-code", extension });
+    createQRCodeInstance(formatData(input.value.trim()), size)
+        .download({ name: "qr-code", extension });
 }
 
 async function downloadBulk(format) {
@@ -176,14 +195,12 @@ async function downloadBulk(format) {
 // ---------- Customization ----------
 document.getElementById('color-foreground').addEventListener('input', (e) => {
     qrSettings.dotsOptions.color = e.target.value;
-    if (currentType === 'bulk') renderBulkQRCodes();
-    else renderSingleQRCode();
+    currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
 });
 
 document.getElementById('color-background').addEventListener('input', (e) => {
     qrSettings.backgroundOptions.color = e.target.value;
-    if (currentType === 'bulk') renderBulkQRCodes();
-    else renderSingleQRCode();
+    currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
 });
 
 cornerStyleBtns.forEach(btn => {
