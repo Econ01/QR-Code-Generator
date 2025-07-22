@@ -26,8 +26,6 @@ const generateBtn = document.getElementById("generate-btn");
 const downloadPngBtn = document.getElementById("download-png");
 const downloadSvgBtn = document.getElementById("download-svg");
 const clearInputBtn = document.getElementById("clear-input");
-const foregroundInput = document.getElementById("color-foreground");
-const backgroundInput = document.getElementById("color-background");
 const chipGroup = document.getElementById("input-type");
 const exportSizeSelect = document.getElementById("export-size");
 const logoInput = document.getElementById("logo-input");
@@ -36,6 +34,34 @@ const errorCorrectionSelect = document.getElementById("error-correction");
 const cornerStyleBtns = document.querySelectorAll(".btn-option");
 
 qrCode.append(qrWrapper);
+
+const htmlElement = document.documentElement;
+const themeToggleBtn = document.getElementById('theme-toggle');
+
+// Apply system theme on launch
+function applySystemTheme() {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    htmlElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    themeToggleBtn.innerHTML = prefersDark 
+        ? '<i class="fas fa-moon"></i>' 
+        : '<i class="fas fa-sun"></i>';
+}
+
+// Toggle manually
+themeToggleBtn.addEventListener('click', () => {
+    const currentTheme = htmlElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    htmlElement.setAttribute('data-theme', newTheme);
+    themeToggleBtn.innerHTML = newTheme === 'dark' 
+        ? '<i class="fas fa-moon"></i>' 
+        : '<i class="fas fa-sun"></i>';
+});
+
+// Listen to system theme changes
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applySystemTheme);
+
+// Initialize theme
+applySystemTheme();
 
 // Format data based on selected type
 function formatData(data) {
@@ -113,13 +139,32 @@ downloadSvgBtn.addEventListener("click", () => {
     qrCode.update({ width: 250, height: 250 });
 });
 
-// Update colors
-foregroundInput.addEventListener("input", () => {
-    qrCode.update({ dotsOptions: { color: foregroundInput.value } });
+// Use CSS variables for defaults
+const primaryColor = getComputedStyle(document.documentElement)
+    .getPropertyValue('--primary').trim();
+
+document.getElementById('color-foreground').value = primaryColor;
+document.getElementById('color-background').value = 'transparent';
+
+// Initialize Coloris for color pickers
+Coloris({
+    el: '.coloris',
+    theme: 'pill',
+    themeMode: 'auto',
+    alpha: true,
+    margin: 10,
+    swatches: [
+        '#4361ee', '#7209b7', '#06d6a0', '#ef476f',
+        '#ffd166', '#118ab2', '#073b4c', '#ffffff', '#000000'
+    ]
 });
 
-backgroundInput.addEventListener("input", () => {
-    qrCode.update({ backgroundOptions: { color: backgroundInput.value } });
+// Event listeners for color changes
+document.getElementById('color-foreground').addEventListener('input', (e) => {
+    qrCode.update({ dotsOptions: { color: e.target.value } });
+});
+document.getElementById('color-background').addEventListener('input', (e) => {
+    qrCode.update({ backgroundOptions: { color: e.target.value } });
 });
 
 // Chip selection
