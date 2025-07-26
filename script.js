@@ -1,6 +1,9 @@
 let currentType = "url";
 let exportSize = 512;
 let bulkQRCodes = [];
+let singleQR = null;
+let bulkQRInstances = [];
+
 let qrSettings = {
     width: 250,
     height: 250,
@@ -26,7 +29,7 @@ const removeLogoBtn = document.getElementById("remove-logo");
 const errorCorrectionSelect = document.getElementById("error-correction");
 const cornerStyleBtns = document.querySelectorAll(".btn-option");
 
-// Theme handling
+// ------------------- Theme Handling -------------------
 const htmlElement = document.documentElement;
 const themeToggleBtn = document.getElementById('theme-toggle');
 
@@ -46,7 +49,7 @@ themeToggleBtn.addEventListener('click', () => {
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applySystemTheme);
 applySystemTheme();
 
-// Format data based on selected type
+// ------------------- Helpers -------------------
 function formatData(data) {
     if (!data) return "https://example.com";
     switch (currentType) {
@@ -61,7 +64,33 @@ function formatData(data) {
     }
 }
 
-// ---------- Bulk Mode Parsing ----------
+function createQRCodeInstance(data, size = qrSettings.width) {
+    return new QRCodeStyling({ ...qrSettings, data, width: size, height: size });
+}
+
+async function createQRCodeBlob(data, format = "png", size = 512) {
+    const tempQR = new QRCodeStyling({ ...qrSettings, data, width: size, height: size });
+    return await tempQR.getRawData(format);
+}
+
+function updateQRWrapperMode() {
+    const count = qrWrapper.querySelectorAll('.qr-item').length;
+    if (count > 1) {
+        qrWrapper.classList.add('qr-grid');
+    } else {
+        qrWrapper.classList.remove('qr-grid');
+    }
+}
+
+function animateUpdate(item, updateFn) {
+    item.classList.add('updating');
+    setTimeout(() => {
+        updateFn();
+        item.classList.remove('updating');
+    }, 200);
+}
+
+// ------------------- Parsing -------------------
 function parseBulkInput(text) {
     const lines = text.split(/\n/);
     const urlRegex = /(https?:\/\/[^\s)]+)/;
@@ -87,80 +116,95 @@ function parseBulkInput(text) {
     return parsed;
 }
 
-function createQRCodeInstance(data, size = qrSettings.width) {
-    return new QRCodeStyling({ ...qrSettings, data, width: size, height: size });
-}
-
-async function createQRCodeBlob(data, format = "png", size = 512) {
-    const tempQR = new QRCodeStyling({ ...qrSettings, data, width: size, height: size });
-    return await tempQR.getRawData(format);
-}
-
-function updateQRWrapperMode() {
-    const count = qrWrapper.querySelectorAll('.qr-item').length;
-    if (count > 1) {
-        qrWrapper.classList.add('qr-grid');
-    } else {
-        qrWrapper.classList.remove('qr-grid');
-    }
-}
-
-// ---------- Rendering ----------
-async function renderBulkQRCodes() {
-    const inputText = bulkInput.value.trim();
-    if (!inputText) return;
-
-    const entries = parseBulkInput(inputText);
-    if (!entries.length) {
-        alert("No valid URLs found!");
-        return;
-    }
-
-    qrWrapper.innerHTML = '';
-    bulkQRCodes = [];
-
-    for (let entry of entries) {
-        const qr = createQRCodeInstance(entry.url, 120); // thumbnails
-        const qrItem = document.createElement('div');
-        qrItem.className = 'qr-item';
-        qr.append(qrItem);
-
-        const nameLabel = document.createElement('p');
-        nameLabel.textContent = entry.name;
-
-        const wrapper = document.createElement('div');
-        wrapper.classList.add('qr-item');
-        wrapper.appendChild(qrItem);
-        wrapper.appendChild(nameLabel);
-
-        qrWrapper.appendChild(wrapper);
-
-        const blob = await createQRCodeBlob(entry.url);
-        bulkQRCodes.push({ name: entry.name, url: entry.url, blob });
-    }
-
-    updateQRWrapperMode();
-}
-
+// ------------------- Rendering -------------------
 function renderSingleQRCode() {
     const text = formatData(input.value.trim());
-    if (!text) {
-        input.focus();
-        return;
+    if (!text) return input.focus();
+
+    if (!singleQR) {
+        qrWrapper.innerHTML = '';
+        const container = document.createElement('div');
+        container.classList.add('qr-item');
+        singleQR = createQRCodeInstance(text, 250);
+        singleQR.append(container);
+        qrWrapper.appendChild(container);
+    } else {
+        animateUpdate(qrWrapper.querySelector('.qr-item'), () => {
+            singleQR.update({ data: text, width: 250, height: 250, ...qrSettings });
+        });
     }
-    qrWrapper.innerHTML = '';
-    const qr = createQRCodeInstance(text, 250);
-    qr.append(qrWrapper);
 
     updateQRWrapperMode();
 }
 
-// ---------- Generate Button ----------
+async function renderBulkQRCodes() {
+    const entries = parseBulkInput(bulkInput.value.trim());
+    if (!entries.length) return alert("No valid URLs found!");
+
+    const currentCount = bulkQRInstances.length;
+    const newCount = entries.length;
+
+    if (newCount !== currentCount) {
+        qrWrapper.innerHTML = '';
+        bulkQRInstances = [];
+
+        for (let entry of entries) {
+            const qr = createQRCodeInstance(entry.url, 120);
+            const qrItem = document.createElement('div');
+            qrItem.classList.add('qr-item');
+            qrItem.style.width = "120px";
+            qrItem.style.height = "120px";
+            qr.append(qrItem);
+
+            const nameLabel = document.createElement('p');
+            nameLabel.textContent = entry.name;
+
+            const wrapper = document.createElement('div');
+            wrapper.classList.add('qr-item-wrapper');
+            wrapper.appendChild(qrItem);
+            wrapper.appendChild(nameLabel);
+
+            qrWrapper.appendChild(wrapper);
+            bulkQRInstances.push({ qr, url: entry.url, container: qrItem });
+        }
+    } else {
+        // Update existing QR codes
+        requestAnimationFrame(() => {
+            entries.forEach((entry, i) => {
+                animateUpdate(qrWrapper.children[i], () => {
+                    bulkQRInstances[i].qr.update({
+                        data: entry.url,
+                        width: 120,
+                        height: 120,
+                        ...qrSettings
+                    });
+                    bulkQRInstances[i].url = entry.url;
+                });
+            });
+        });
+    }
+
+    updateQRWrapperMode();
+}
+
+function updateAllQRCodes() {
+    requestAnimationFrame(() => {
+        if (currentType === 'bulk') {
+            bulkQRInstances.forEach(instance => {
+                instance.qr.update({ width: 120, height: 120, ...qrSettings });
+            });
+        } else if (singleQR) {
+            singleQR.update({ width: 250, height: 250, ...qrSettings });
+        }
+    });
+}
+
+// ------------------- Generate -------------------
 generateBtn.addEventListener("click", () => {
     currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
 });
 
-// ---------- Download Buttons ----------
+// ------------------- Download -------------------
 downloadPngBtn.addEventListener("click", async () => {
     currentType === 'bulk' ? await downloadBulk('png') : downloadSingle('png');
 });
@@ -171,19 +215,18 @@ downloadSvgBtn.addEventListener("click", async () => {
 
 function downloadSingle(extension) {
     const size = parseInt(exportSizeSelect.value, 10);
-    createQRCodeInstance(formatData(input.value.trim()), size)
-        .download({ name: "qr-code", extension });
+    singleQR.update({ width: size, height: size });
+    singleQR.download({ name: "qr-code", extension });
+    singleQR.update({ width: 250, height: 250 });
 }
 
 async function downloadBulk(format) {
-    if (!bulkQRCodes.length) {
-        alert("No QR codes generated for bulk download.");
-        return;
-    }
+    if (!bulkQRInstances.length) return alert("No QR codes generated for bulk download.");
+
     const zip = new JSZip();
-    for (let qr of bulkQRCodes) {
-        const blob = await createQRCodeBlob(qr.url, format, parseInt(exportSizeSelect.value, 10));
-        zip.file(`${qr.name}.${format}`, blob);
+    for (let instance of bulkQRInstances) {
+        const blob = await createQRCodeBlob(instance.url, format, parseInt(exportSizeSelect.value, 10));
+        zip.file(`${instance.url.replace(/https?:\/\//, '').split('/')[0]}.${format}`, blob);
     }
     const content = await zip.generateAsync({ type: "blob" });
     const a = document.createElement('a');
@@ -192,15 +235,15 @@ async function downloadBulk(format) {
     a.click();
 }
 
-// ---------- Customization ----------
+// ------------------- Customization -------------------
 document.getElementById('color-foreground').addEventListener('input', (e) => {
     qrSettings.dotsOptions.color = e.target.value;
-    currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
+    updateAllQRCodes();
 });
 
 document.getElementById('color-background').addEventListener('input', (e) => {
     qrSettings.backgroundOptions.color = e.target.value;
-    currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
+    updateAllQRCodes();
 });
 
 cornerStyleBtns.forEach(btn => {
@@ -208,13 +251,13 @@ cornerStyleBtns.forEach(btn => {
         cornerStyleBtns.forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         qrSettings.dotsOptions.type = btn.dataset.value;
-        currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
+        updateAllQRCodes();
     });
 });
 
 errorCorrectionSelect.addEventListener("change", () => {
     qrSettings.qrOptions.errorCorrectionLevel = errorCorrectionSelect.value;
-    currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
+    updateAllQRCodes();
 });
 
 // Logo Upload
@@ -224,7 +267,7 @@ logoInput.addEventListener("change", (e) => {
     const reader = new FileReader();
     reader.onload = function (event) {
         qrSettings.image = event.target.result;
-        currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
+        updateAllQRCodes();
     };
     reader.readAsDataURL(file);
 });
@@ -233,7 +276,7 @@ logoInput.addEventListener("change", (e) => {
 removeLogoBtn.addEventListener("click", () => {
     qrSettings.image = "";
     logoInput.value = "";
-    currentType === 'bulk' ? renderBulkQRCodes() : renderSingleQRCode();
+    updateAllQRCodes();
 });
 
 // Clear input
@@ -270,7 +313,7 @@ chipGroup.addEventListener("click", (e) => {
     }
 });
 
-// Initialize
+// ------------------- Init -------------------
 document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
         document.body.classList.add("loaded");
