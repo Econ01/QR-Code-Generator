@@ -90,8 +90,39 @@ function animateUpdate(item, updateFn) {
     }, 200);
 }
 
-// ------------------- Parsing -------------------
+// ------------------- Responsive QR Sizing (Module Integration) -------------------
+function getResponsiveQRSize(isBulk = false) {
+    const containerWidth = qrWrapper.offsetWidth;
+    const screenWidth = window.innerWidth;
+    
+    if (isBulk) {
+        if (screenWidth <= 767) {
+            return Math.min(100, Math.floor((containerWidth - 32) / 3) - 8);
+        } else if (screenWidth <= 1023) {
+            return Math.min(110, Math.floor((containerWidth - 64) / 4) - 8);
+        } else {
+            return 120;
+        }
+    } else {
+        if (screenWidth <= 767) {
+            return Math.min(200, containerWidth - 32);
+        } else if (screenWidth <= 1023) {
+            return Math.min(220, containerWidth - 64);
+        } else {
+            return 250;
+        }
+    }
+}
+
+// ------------------- Parsing (Module Integration) -------------------
 function parseBulkInput(text) {
+    // Use enhanced parsing from bulk-url.js module if available
+    if (window.BulkURLManager) {
+        const manager = new window.BulkURLManager();
+        return manager.parseImprovedBulkInput(text);
+    }
+    
+    // Fallback parsing
     const lines = text.split(/\n/);
     const urlRegex = /(https?:\/\/[^\s)]+)/;
     const nameUrlRegex = /\[(.*?)\]\((https?:\/\/[^\s)]+)\)/;
@@ -121,16 +152,18 @@ function renderSingleQRCode() {
     const text = formatData(input.value.trim());
     if (!text) return input.focus();
 
+    const qrSize = getResponsiveQRSize(false);
+
     if (!singleQR) {
         qrWrapper.innerHTML = '';
         const container = document.createElement('div');
         container.classList.add('qr-item');
-        singleQR = createQRCodeInstance(text, 250);
+        singleQR = createQRCodeInstance(text, qrSize);
         singleQR.append(container);
         qrWrapper.appendChild(container);
     } else {
         animateUpdate(qrWrapper.querySelector('.qr-item'), () => {
-            singleQR.update({ data: text, width: 250, height: 250, ...qrSettings });
+            singleQR.update({ data: text, width: qrSize, height: qrSize, ...qrSettings });
         });
     }
 
@@ -141,6 +174,7 @@ async function renderBulkQRCodes() {
     const entries = parseBulkInput(bulkInput.value.trim());
     if (!entries.length) return alert("No valid URLs found!");
 
+    const qrSize = getResponsiveQRSize(true);
     const currentCount = bulkQRInstances.length;
     const newCount = entries.length;
 
@@ -149,11 +183,11 @@ async function renderBulkQRCodes() {
         bulkQRInstances = [];
 
         for (let entry of entries) {
-            const qr = createQRCodeInstance(entry.url, 120);
+            const qr = createQRCodeInstance(entry.url, qrSize);
             const qrItem = document.createElement('div');
             qrItem.classList.add('qr-item');
-            qrItem.style.width = "120px";
-            qrItem.style.height = "120px";
+            qrItem.style.width = `${qrSize}px`;
+            qrItem.style.height = `${qrSize}px`;
             qr.append(qrItem);
 
             const nameLabel = document.createElement('p');
@@ -168,17 +202,20 @@ async function renderBulkQRCodes() {
             bulkQRInstances.push({ qr, url: entry.url, container: qrItem });
         }
     } else {
-        // Update existing QR codes
         requestAnimationFrame(() => {
             entries.forEach((entry, i) => {
                 animateUpdate(qrWrapper.children[i], () => {
                     bulkQRInstances[i].qr.update({
                         data: entry.url,
-                        width: 120,
-                        height: 120,
+                        width: qrSize,
+                        height: qrSize,
                         ...qrSettings
                     });
                     bulkQRInstances[i].url = entry.url;
+                    
+                    const qrItem = bulkQRInstances[i].container;
+                    qrItem.style.width = `${qrSize}px`;
+                    qrItem.style.height = `${qrSize}px`;
                 });
             });
         });
@@ -190,14 +227,27 @@ async function renderBulkQRCodes() {
 function updateAllQRCodes() {
     requestAnimationFrame(() => {
         if (currentType === 'bulk') {
+            const qrSize = getResponsiveQRSize(true);
             bulkQRInstances.forEach(instance => {
-                instance.qr.update({ width: 120, height: 120, ...qrSettings });
+                instance.qr.update({ width: qrSize, height: qrSize, ...qrSettings });
+                instance.container.style.width = `${qrSize}px`;
+                instance.container.style.height = `${qrSize}px`;
             });
         } else if (singleQR) {
-            singleQR.update({ width: 250, height: 250, ...qrSettings });
+            const qrSize = getResponsiveQRSize(false);
+            singleQR.update({ width: qrSize, height: qrSize, ...qrSettings });
         }
     });
 }
+
+// ------------------- Responsive Window Handling -------------------
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        updateAllQRCodes();
+    }, 250);
+});
 
 // ------------------- Generate -------------------
 generateBtn.addEventListener("click", () => {
@@ -217,17 +267,23 @@ function downloadSingle(extension) {
     const size = parseInt(exportSizeSelect.value, 10);
     singleQR.update({ width: size, height: size });
     singleQR.download({ name: "qr-code", extension });
-    singleQR.update({ width: 250, height: 250 });
+    
+    const currentSize = getResponsiveQRSize(false);
+    singleQR.update({ width: currentSize, height: currentSize });
 }
 
 async function downloadBulk(format) {
     if (!bulkQRInstances.length) return alert("No QR codes generated for bulk download.");
 
     const zip = new JSZip();
+    const size = parseInt(exportSizeSelect.value, 10);
+    
     for (let instance of bulkQRInstances) {
-        const blob = await createQRCodeBlob(instance.url, format, parseInt(exportSizeSelect.value, 10));
-        zip.file(`${instance.url.replace(/https?:\/\//, '').split('/')[0]}.${format}`, blob);
+        const blob = await createQRCodeBlob(instance.url, format, size);
+        const filename = instance.url.replace(/https?:\/\//, '').split('/')[0];
+        zip.file(`${filename}.${format}`, blob);
     }
+    
     const content = await zip.generateAsync({ type: "blob" });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(content);
@@ -305,11 +361,25 @@ chipGroup.addEventListener("click", (e) => {
             input.style.display = "none";
             bulkInput.style.display = "block";
             bulkInput.placeholder = placeholder.bulk;
+            
+            // Show bulk guide if available
+            const guide = document.querySelector('.bulk-format-guide');
+            if (guide) guide.style.display = 'block';
         } else {
             input.style.display = "block";
             bulkInput.style.display = "none";
             input.placeholder = placeholder[currentType];
+            
+            // Hide bulk guide
+            const guide = document.querySelector('.bulk-format-guide');
+            if (guide) guide.style.display = 'none';
         }
+        
+        // Clear existing QR codes when switching types
+        qrWrapper.innerHTML = '<div class="placeholder"><i class="fas fa-qrcode"></i><p>Your QR code will appear here</p></div>';
+        singleQR = null;
+        bulkQRInstances = [];
+        updateQRWrapperMode();
     }
 });
 
@@ -318,5 +388,14 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
         document.body.classList.add("loaded");
     }, 300);
+    
     renderSingleQRCode();
+    
+    // Hide bulk guide initially
+    setTimeout(() => {
+        const guide = document.querySelector('.bulk-format-guide');
+        if (guide && currentType !== 'bulk') {
+            guide.style.display = 'none';
+        }
+    }, 100);
 });
