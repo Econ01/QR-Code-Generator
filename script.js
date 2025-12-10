@@ -58,7 +58,10 @@ function formatData(data) {
         case "email":
             return data.startsWith("mailto:") ? data : `mailto:${data}`;
         case "phone":
-            return data.startsWith("tel:") ? data : `tel:${data}`;
+            const cleanPhone = data.replace(/[^0-9+]/g, '');
+            return `tel:${cleanPhone}`;
+        case "text":
+            return data;
         default:
             return data;
     }
@@ -149,15 +152,15 @@ async function renderBulkQRCodes() {
         bulkQRInstances = [];
 
         for (let entry of entries) {
-            const qr = createQRCodeInstance(entry.url, 120);
+            // Generate at slightly higher res for display
+            const qr = createQRCodeInstance(entry.url, 200); 
             const qrItem = document.createElement('div');
             qrItem.classList.add('qr-item');
-            qrItem.style.width = "120px";
-            qrItem.style.height = "120px";
             qr.append(qrItem);
 
             const nameLabel = document.createElement('p');
             nameLabel.textContent = entry.name;
+            nameLabel.title = entry.url; // Tooltip for full URL
 
             const wrapper = document.createElement('div');
             wrapper.classList.add('qr-item-wrapper');
@@ -165,7 +168,7 @@ async function renderBulkQRCodes() {
             wrapper.appendChild(nameLabel);
 
             qrWrapper.appendChild(wrapper);
-            bulkQRInstances.push({ qr, url: entry.url, container: qrItem });
+            bulkQRInstances.push({ qr, url: entry.url, name: entry.name, container: qrItem });
         }
     } else {
         // Update existing QR codes
@@ -174,11 +177,14 @@ async function renderBulkQRCodes() {
                 animateUpdate(qrWrapper.children[i], () => {
                     bulkQRInstances[i].qr.update({
                         data: entry.url,
-                        width: 120,
-                        height: 120,
+                        width: 200,
+                        height: 200,
                         ...qrSettings
                     });
                     bulkQRInstances[i].url = entry.url;
+                    bulkQRInstances[i].name = entry.name;
+                    // Update label text if needed
+                    qrWrapper.children[i].querySelector('p').textContent = entry.name;
                 });
             });
         });
@@ -191,7 +197,7 @@ function updateAllQRCodes() {
     requestAnimationFrame(() => {
         if (currentType === 'bulk') {
             bulkQRInstances.forEach(instance => {
-                instance.qr.update({ width: 120, height: 120, ...qrSettings });
+                instance.qr.update({ width: 200, height: 200, ...qrSettings });
             });
         } else if (singleQR) {
             singleQR.update({ width: 250, height: 250, ...qrSettings });
@@ -224,9 +230,16 @@ async function downloadBulk(format) {
     if (!bulkQRInstances.length) return alert("No QR codes generated for bulk download.");
 
     const zip = new JSZip();
-    for (let instance of bulkQRInstances) {
+    for (let i = 0; i < bulkQRInstances.length; i++) {
+        const instance = bulkQRInstances[i];
         const blob = await createQRCodeBlob(instance.url, format, parseInt(exportSizeSelect.value, 10));
-        zip.file(`${instance.url.replace(/https?:\/\//, '').split('/')[0]}.${format}`, blob);
+        
+        // Use parsed name if available, fallback to domain, then generic
+        let safeName = (instance.name || instance.url.replace(/https?:\/\//, '').split('/')[0] || 'qr-code')
+            .replace(/[^a-z0-9\-_]/gi, '_'); // Sanitize filename
+            
+        const filename = `${safeName}-${i + 1}.${format}`;
+        zip.file(filename, blob);
     }
     const content = await zip.generateAsync({ type: "blob" });
     const a = document.createElement('a');
@@ -236,14 +249,28 @@ async function downloadBulk(format) {
 }
 
 // ------------------- Customization -------------------
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+const debouncedUpdate = debounce(() => updateAllQRCodes(), 200);
+
 document.getElementById('color-foreground').addEventListener('input', (e) => {
     qrSettings.dotsOptions.color = e.target.value;
-    updateAllQRCodes();
+    debouncedUpdate();
 });
 
 document.getElementById('color-background').addEventListener('input', (e) => {
     qrSettings.backgroundOptions.color = e.target.value;
-    updateAllQRCodes();
+    debouncedUpdate();
 });
 
 cornerStyleBtns.forEach(btn => {
@@ -292,6 +319,10 @@ chipGroup.addEventListener("click", (e) => {
         document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
         chip.classList.add("active");
         currentType = chip.dataset.type;
+
+        // Clear inputs on switch to prevent invalid format data
+        input.value = "";
+        bulkInput.value = "";
 
         const placeholder = {
             url: "https://example.com",
