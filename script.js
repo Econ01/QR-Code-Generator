@@ -26,6 +26,9 @@ const chipGroup = document.getElementById("input-type");
 const exportSizeSelect = document.getElementById("export-size");
 const logoInput = document.getElementById("logo-input");
 const removeLogoBtn = document.getElementById("remove-logo");
+const logoSettingsGroup = document.getElementById("logo-settings-group");
+const logoSizeInput = document.getElementById("logo-size");
+const logoMarginInput = document.getElementById("logo-margin");
 const errorCorrectionSelect = document.getElementById("error-correction");
 const cornerStyleBtns = document.querySelectorAll(".btn-option");
 
@@ -219,11 +222,16 @@ downloadSvgBtn.addEventListener("click", async () => {
     currentType === 'bulk' ? await downloadBulk('svg') : downloadSingle('svg');
 });
 
-function downloadSingle(extension) {
+async function downloadSingle(extension) {
     const size = parseInt(exportSizeSelect.value, 10);
-    singleQR.update({ width: size, height: size });
-    singleQR.download({ name: "qr-code", extension });
-    singleQR.update({ width: 250, height: 250 });
+    // Create a fresh instance for export to ensure high resolution logo
+    const tempQR = new QRCodeStyling({
+        ...qrSettings,
+        width: size,
+        height: size,
+        data: formatData(input.value.trim()) // Ensure current data is used
+    });
+    await tempQR.download({ name: "qr-code", extension });
 }
 
 async function downloadBulk(format) {
@@ -294,6 +302,7 @@ logoInput.addEventListener("change", (e) => {
     const reader = new FileReader();
     reader.onload = function (event) {
         qrSettings.image = event.target.result;
+        logoSettingsGroup.style.display = "block";
         updateAllQRCodes();
     };
     reader.readAsDataURL(file);
@@ -303,7 +312,20 @@ logoInput.addEventListener("change", (e) => {
 removeLogoBtn.addEventListener("click", () => {
     qrSettings.image = "";
     logoInput.value = "";
+    logoSettingsGroup.style.display = "none";
     updateAllQRCodes();
+});
+
+// Logo Size Slider
+logoSizeInput.addEventListener("input", (e) => {
+    qrSettings.imageOptions.imageSize = parseFloat(e.target.value);
+    debouncedUpdate();
+});
+
+// Logo Margin Slider
+logoMarginInput.addEventListener("input", (e) => {
+    qrSettings.imageOptions.margin = parseInt(e.target.value, 10);
+    debouncedUpdate();
 });
 
 // Clear input

@@ -120,10 +120,36 @@ body {
 
 .container {
     width: 100%;
-    max-width: 500px;
+    max-width: 500px; /* Default for mobile */
     background: var(--background-raised);
     box-shadow: var(--shadow-soft);
     border-radius: 40px;
+    transition: max-width 0.3s ease; /* Smooth transition */
+}
+
+/* Desktop Responsive Layout */
+@media (min-width: 900px) {
+    .container {
+        max-width: 1100px;
+    }
+
+    .card {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 3rem;
+        align-items: start;
+    }
+
+    .preview-panel {
+        position: sticky;
+        top: 2rem;
+    }
+    
+    /* Adjust header for wider layout */
+    header {
+        grid-column: 1 / -1;
+        margin-bottom: 1rem;
+    }
 }
 
 header {
@@ -320,6 +346,20 @@ button.secondary:active {
     resize: vertical;
 }
 
+/* Single QR fallback style */
+.qr-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 40px;
+    background: #ffffff;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
 /* Dynamic grid for multiple QR codes */
 .qr-wrapper.qr-grid {
     display: grid;
@@ -377,9 +417,10 @@ button.secondary:active {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
+    background: #ffffff;
     border-radius: 10px;
     overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.1);
 }
 
 .qr-wrapper.qr-grid img {
@@ -412,7 +453,7 @@ button.secondary:active {
 
 .placeholder {
     text-align: center;
-    color: var(--text);
+    color: #333333;
     padding: 1rem;
 }
 
